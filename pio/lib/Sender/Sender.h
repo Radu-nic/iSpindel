@@ -16,6 +16,7 @@
 
 class SenderClass
 {
+  using MessageCallback = bool (*)(String);
 public:
   SenderClass();
   String sendTCP(String server, uint16_t port = 80);
@@ -38,6 +39,7 @@ public:
   bool RTCSyncToNTP();
   void mqttCallback(char *topic, byte *payload, unsigned int length);
   bool mqttConnect(const String &server, uint16_t port, const String &name, const String &username, const String &password, const bool secure = false, const char CACert[] = "", const char deviceCert[] = "", const char deviceKey[] = "");
+  void registerMqttCallback(MessageCallback callbackProc, bool clearReceivedPersistentMessage = false);  
   // ~SenderClass();
 
 private:
@@ -45,6 +47,9 @@ private:
   PubSubClient _mqttClient;
   StaticJsonDocument<256> _doc;
   WiFiClientSecure _secureClient;
+  MessageCallback messageCallbackProc;
+  bool ClearMqttPersistentMessage = false;
+  String MqttTopicToClear;  
 };
 
 #endif
