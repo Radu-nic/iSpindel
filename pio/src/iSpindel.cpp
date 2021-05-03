@@ -883,10 +883,10 @@ bool uploadData(uint8_t service)
     String voltToSend = String(Volt, 2);
     sender.add("30", voltToSend); //send temperature without the unit to the graph first
 
-    tempToSend += "Â°";
+    tempToSend += "°";
     tempToSend += tempScaleLabel(); // Add temperature unit to the String
 
-    sender.add("1", String(Tilt, 1) + "Â°");
+    sender.add("1", String(Tilt, 1) + "°");
     sender.add("2", tempToSend);
     sender.add("3", voltToSend + "V");
     sender.add("4", String(Gravity, 3));
