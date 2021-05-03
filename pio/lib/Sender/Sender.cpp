@@ -108,6 +108,11 @@ bool SenderClass::mqttConnect(const String &server, uint16_t port, const String 
         if (ret)
         {
             CONSOLELN(F("Connected to MQTT"));
+            //register to "ispindel/*/settings" topic to receive any persistent message that may contain settings update
+            if (!_mqttClient.subscribe(("ispindel/" + name + "/settings").c_str()))
+            {
+                CONSOLELN(F("ERROR: Can not subscribe callbacks"));
+            }
             return true;
         }
         else
@@ -166,14 +171,34 @@ bool SenderClass::mqttConnect(const String &server, uint16_t port, const String 
 bool SenderClass::sendMQTT(String server, uint16_t port, String username, String password, String name)
 {
     bool response = mqttConnect(server, port, name, username, password);
+    bool checkSettings = false;
     if (response)
     {
         //MQTT publish values
         for (const auto &kv : _doc.as<JsonObject>())
         {
            CONSOLELN("MQTT publish: ispindel/" + name + "/" + kv.key().c_str() + "/" + kv.value().as<String>());
+           if( kv.key() == "checkSettings"){
+               checkSettings = true;
+           }
            _mqttClient.publish(("ispindel/" + name + "/" + kv.key().c_str()).c_str(), kv.value().as<String>().c_str());
            _mqttClient.loop(); //This should be called regularly to allow the client to process incoming messages and maintain its connection to the server.
+        }
+    }
+    
+    //should we clear the persistent settings messsage?
+    if (MqttTopicToClear != "")
+    {
+        CONSOLE("Send empty persistent message to ");
+        CONSOLE(MqttTopicToClear);
+        _mqttClient.publish(MqttTopicToClear.c_str(), NULL, true);
+    } else {
+        if(checkSettings){
+            long tick = millis();
+            while(millis()-tick < 500){
+                _mqttClient.loop();
+                delay(50);
+            }
         }
     }
 
@@ -181,6 +206,12 @@ bool SenderClass::sendMQTT(String server, uint16_t port, String username, String
     _mqttClient.disconnect();
     stopclient();
     return response;
+}
+
+void SenderClass::registerMqttCallback(MessageCallback callbackProc, bool clearReceivedPersistentMessage)
+{
+    ClearMqttPersistentMessage = clearReceivedPersistentMessage;
+    messageCallbackProc = callbackProc;
 }
 
 void SenderClass::mqttCallback(char *topic, byte *payload, unsigned int length)
@@ -192,6 +223,17 @@ void SenderClass::mqttCallback(char *topic, byte *payload, unsigned int length)
     {
         CONSOLE((char)payload[i]);
     }
+    CONSOLELN("");
+
+    if (messageCallbackProc != NULL)
+    {
+        // can not sent message directly from mqtt callback function. Instruct to be done before disconnecting
+        if (ClearMqttPersistentMessage)
+        {
+            MqttTopicToClear = topic;
+        }
+        messageCallbackProc(String((char *)payload));
+    }    
 }
 
 bool SenderClass::sendSecureMQTT(char CACert[], char deviceCert[], char deviceKey[], String server, uint16_t port, String name, String topic)    //AWS
