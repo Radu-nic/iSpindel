@@ -178,9 +178,6 @@ bool SenderClass::sendMQTT(String server, uint16_t port, String username, String
         for (const auto &kv : _doc.as<JsonObject>())
         {
            CONSOLELN("MQTT publish: ispindel/" + name + "/" + kv.key().c_str() + "/" + kv.value().as<String>());
-           if( kv.key() == "checkSettings"){
-               checkSettings = true;
-           }
            _mqttClient.publish(("ispindel/" + name + "/" + kv.key().c_str()).c_str(), kv.value().as<String>().c_str());
            _mqttClient.loop(); //This should be called regularly to allow the client to process incoming messages and maintain its connection to the server.
         }
@@ -193,12 +190,10 @@ bool SenderClass::sendMQTT(String server, uint16_t port, String username, String
         CONSOLE(MqttTopicToClear);
         _mqttClient.publish(MqttTopicToClear.c_str(), NULL, true);
     } else {
-        if(checkSettings){
-            long tick = millis();
-            while(millis()-tick < 500){
-                _mqttClient.loop();
-                delay(50);
-            }
+        long tick = millis();
+        while(millis()-tick < 500){
+            _mqttClient.loop();
+            delay(50);
         }
     }
 

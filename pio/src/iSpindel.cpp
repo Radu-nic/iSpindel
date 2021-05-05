@@ -36,7 +36,6 @@ DeviceAddress tempDeviceAddress;
 Ticker flasher;
 RunningMedian samples = RunningMedian(MEDIANROUNDSMAX);
 DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
-uint32_t lastCheckMqttSettings = 0;
 
 #define TEMP_CELSIUS 0
 #define TEMP_FAHRENHEIT 1
@@ -280,7 +279,7 @@ bool LoadSettingsFromJson(DynamicJsonDocument doc)
     somethingChanged = somethingChanged || (strcmp(my_polynominal, doc["POLY"]) != 0);
     strcpy(my_polynominal, doc["POLY"]);
   }
-
+  
   if (doc.containsKey("Offset"))
   {
     int32_t key1 = 0;
@@ -755,10 +754,6 @@ bool uploadData(uint8_t service)
     sender.add("interval", my_sleeptime);
     sender.add("RSSI", WiFi.RSSI());
     sender.add("report", getReportJson()); 
-    if(millis()-lastCheckMqttSettings>180000){
-      sender.add("checkSettings",1);
-      lastCheckMqttSettings = millis();
-    }   
     CONSOLELN(F("\ncalling MQTT"));
     return sender.sendMQTT(my_server, my_port, my_username, my_password, my_name);
   }
